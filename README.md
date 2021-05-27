@@ -2,7 +2,7 @@
 
 NucleoMap is a nucleosome caller for high-resolution chromatin contact maps.
 
-## dependency
+## Dependency
 
 ## Usage
 
