@@ -45,3 +45,4 @@ python nucleomap.py <read centers> <out dir> <PWM> <reference genome>
 ```
 
 ### Nucleosome contact map generating
+To be updated
