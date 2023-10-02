@@ -27,7 +27,7 @@ Due to high computational burden, it is impossible to feed the entire contact ma
 Therefore, the pair file needs to be separated according to chromosomes. Inter-chromosome contacts are discarded.\
 After that, nucleosome centers and the adjusted alignments are calculated from the separated pair files using 
 ```
-python infer_center.py <pair file> <out dir>
+python infer_center.py <pair file> --path <out dir>
 ```
 The output of this step is a bed file ``reads.bed`` containing adjusted alignments and a numpy array ``read_centers.npy`` containing inferred read centers.
 
@@ -36,13 +36,26 @@ Next, DNA sequence of the adjusted alignments are extracted using
 bedtools getfasta -fi ref_genome.fa -bed reads.bed > output.fa
 ```
 
-At the end, the binding preference is calculated from the extracted DNA sequence.
+### PWM calculating
+This step calculates the nucleosome binding preference from the extracted DNA sequence.
+```
+python calculate_pwm.py <seq_file> --path <out dir>
+```
 
 ### Nucleosome calling
 Nucleosomes are called using
 ```
-python nucleomap.py <read centers> <out dir> <PWM> <reference genome> 
+python nucleomap.py <read centers> --path <out dir> --pwm <PWM> --ref <reference genome> 
 ```
-
+<!-- 
 ### Nucleosome contact map generating
-To be updated
+To be updated -->
+
+## Outputs
+The final outputs include:
+* all_pos_unbiased.npy: a numpy array of shifted contact anchors
+* called_nucs.npy: a numpy array of nucleosome center positions
+* nuc_pwm.npy: a numpy array of nucleosome binding preference
+* nuc_sequence.fa: a FASTA file of nucleosome binding sequence
+* read_assignment.npy: assigned nucleosome indices of the contact anchors
+* reads.bed: a bed file of shifted contact anchors

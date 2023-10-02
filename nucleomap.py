@@ -8,19 +8,21 @@ parser = argparse.ArgumentParser(
     description=""" """)
 parser.add_argument('read_centers', help='read centers matrix in .npy format', type=str)
 parser.add_argument(
-    'path', help='output directory, default = ./', default='./', type=str)
+    '--path', help='output directory, default = ./', default='./', type=str)
 parser.add_argument(
-    'pwm', help='PWM of dinucleotide motifs, default = None', default=None, type=str)
+    '--pwm', help='PWM of dinucleotide motifs, default = None', default=None, type=str)
 parser.add_argument(
-    'seq_file', help='reference genome fasta file, default = None', default=None, type=str)
+    '--ref', help='reference genome fasta file, default = None', default=None, type=str)
+parser.add_argument(
+    '--lbd', help='hyperparameter lambda in DP-means, default = 10', default=10, type=str)
 
 args = parser.parse_args()
 path = args.path
 all_pos_unbiased = np.load(args.read_centers)
 if args.pwm:
     pwm = np.load(args.pwm)
-    seq_file = args.seqfile
-part_pos = args.read_centers
+    seq_file = args.ref
+part_pos = all_pos_unbiased
 
 bin_len = 1000
 bins = np.arange(min(part_pos), max(part_pos)+bin_len, bin_len)
@@ -33,17 +35,20 @@ w = 250000 # cl element penalty
 w2 = 10 #seq coef
 peaks = []
 pi = np.zeros(len(part_pos))
-lbd = int(argv[5])
-fiter = fasta_iter(seq_file)
+lbd = int(args.lbd)
+if args.pwm:
+    fiter = fasta_iter(seq_file)
 
-for ff in fiter:
-    header, seq = ff
-    e = encode_seq(seq)
-    e2 = encode_seq(seq[1:])
-    scores = np.correlate(e, pwm[0], 'same') + np.correlate(1-e, pwm[1], 'same')
-    scores2 = np.correlate(e2, pwm[0], 'same') + np.correlate(1-e2, pwm[1], 'same')
-    scores = np.vstack([scores, np.r_[scores2, 0]]).T.flatten()
-    scores = w2*(scores-scores.mean())/np.std(scores)
+    for ff in fiter:
+        header, seq = ff
+        e = encode_seq(seq)
+        e2 = encode_seq(seq[1:])
+        scores = np.correlate(e, pwm[0], 'same') + np.correlate(1-e, pwm[1], 'same')
+        scores2 = np.correlate(e2, pwm[0], 'same') + np.correlate(1-e2, pwm[1], 'same')
+        scores = np.vstack([scores, np.r_[scores2, 0]]).T.flatten()
+        scores = w2*(scores-scores.mean())/np.std(scores)
+else:
+    scores = 0
 
 for i in range(len(bins)-1):
     bin_start = bins[i]
@@ -85,5 +90,8 @@ for i in range(len(bins)-1):
     pi[idx] = labels+n_peaks
     n_peaks += k
 
-np.save(os.path.join(path, f'read_assignment'), pi)
-np.save(os.path.join(path, f'called_nucs'), np.concatenate(peaks))
+nuc = np.sort(np.concatenate(peaks).astype(int))
+assignment = np.digitize(all_pos_unbiased, (nuc[:-1] + nuc[1:])/2).reshape([-1,2])
+
+np.save(os.path.join(path, f'read_assignment'), assignment.flatten())
+np.save(os.path.join(path, f'called_nucs'), nuc)
